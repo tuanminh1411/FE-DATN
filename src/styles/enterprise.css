@@ -1,0 +1,26 @@
+/* Shell dành riêng cho Enterprise Portal */
+.enterprise-shell {
+  /* nền nhạt hơn, hơi green */
+  background-color: #f3faf7;
+}
+
+/* Sidebar doanh nghiệp override màu */
+.enterprise-sidebar {
+  background: #065f46; /* xanh lá đậm */
+}
+
+/* Sidebar item active doanh nghiệp */
+.enterprise-sidebar .sidebar-item-active {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+/* Hover */
+.enterprise-sidebar .sidebar-item:hover:not([disabled]) {
+  background: #064e3b;
+}
+
+/* Avatar doanh nghiệp dùng màu khác một chút */
+.enterprise-shell .topbar-avatar {
+  background: #047857;
+}
