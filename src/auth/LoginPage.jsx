@@ -47,13 +47,25 @@ function LoginPage({ onLoginSuccess, onRegister }) {
         throw new Error(result.message || "Đăng nhập thất bại.");
       }
 
-      // Dạng JSON giống screenshot:
-      // { success, message, data: { user: {...}, token: "...", expiresAt: "..." } }
+      // { success, message, data: { user: {...}, token: "..." } }
       const { user, token } = result.data || {};
 
       if (!user || !token) {
         throw new Error("Phản hồi từ server không hợp lệ.");
       }
+
+      // --- [MỚI] LƯU ID VÀ TOKEN VÀO LOCAL STORAGE ---
+      // 1. Lưu Token để các request sau dùng
+      localStorage.setItem("accessToken", token);
+      
+      // 2. Lưu thông tin User
+      localStorage.setItem("currentUser", JSON.stringify(user));
+
+      // 3. Lưu ID Doanh nghiệp để các trang quản lý (ProductsPage) sử dụng
+      // (Giả sử trong object user có trường doanhNghiepId, nếu không thì dùng user.id)
+      const enterpriseId = user.doanhNghiepId || user.id; 
+      localStorage.setItem("currentEnterpriseId", enterpriseId);
+      // ---------------------------------------------------
 
       // Gửi lên App.jsx: user + token
       onLoginSuccess && onLoginSuccess({ user, token });

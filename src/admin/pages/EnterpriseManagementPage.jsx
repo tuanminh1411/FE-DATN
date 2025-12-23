@@ -1,194 +1,338 @@
+import React, { useState, useEffect } from "react";
 import AdminLayout from "../layout/AdminLayout";
+import axios from "axios";
+
+// Cấu hình base URL
+const API_BASE_URL = "http://localhost:5081";
 
 function EnterpriseManagementPage({ currentPage, onNavigate, onLogout }) {
+  // --- State quản lý dữ liệu ---
+  const [enterprises, setEnterprises] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // State thông báo (Notification)
+  const [notification, setNotification] = useState({ show: false, message: "", type: "success" });
+
+  // State bộ lọc và tìm kiếm
+  const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, ACTIVE, PENDING
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // State doanh nghiệp đang chọn
+  const [selectedEnterprise, setSelectedEnterprise] = useState(null);
+  const [noteInput, setNoteInput] = useState("");
+
+  // --- Hàm hiển thị thông báo tự tắt sau 3s ---
+  const showNotification = (message, type = "success") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "success" });
+    }, 3000);
+  };
+
+  // --- 1. Gọi API lấy danh sách ---
+  const fetchEnterprises = async () => {
+    setLoading(true); // Bắt đầu tải -> set loading = true
+    try {
+      let url = `${API_BASE_URL}/api/YeuCauDangKyDn/Admin`;
+      
+      if (filterStatus === 'PENDING') {
+          url = `${API_BASE_URL}/api/YeuCauDangKyDn`;
+      }
+
+      const response = await axios.get(url);
+      let data = response.data || [];
+
+      if (filterStatus !== "ALL") {
+        data = data.filter(item => item.trangThai === filterStatus);
+      }
+
+      setEnterprises(data);
+
+      if (selectedEnterprise) {
+        const updatedSelected = data.find(e => e.id === selectedEnterprise.id);
+        if (updatedSelected) {
+            setSelectedEnterprise(updatedSelected);
+            setNoteInput(updatedSelected.ghiChu || "");
+        } else {
+            setSelectedEnterprise(null);
+        }
+      }
+
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách:", error);
+      showNotification("Không thể tải danh sách doanh nghiệp", "error");
+    } finally {
+      setLoading(false); // Tải xong -> set loading = false
+    }
+  };
+
+  useEffect(() => {
+    fetchEnterprises();
+  }, [filterStatus]);
+
+  // --- 2. Xử lý chọn doanh nghiệp ---
+  const handleSelectEnterprise = (enterprise) => {
+    setSelectedEnterprise(enterprise);
+    setNoteInput(enterprise.ghiChu || "");
+  };
+
+  // --- 3. API Cập nhật trạng thái (PUT) ---
+  const handleUpdateStatus = async (newStatus) => {
+    if (!selectedEnterprise) return;
+
+    const statusToSend = newStatus || selectedEnterprise.trangThai;
+
+    const payload = {
+      trangThai: statusToSend,
+      ghiChu: noteInput
+    };
+
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/YeuCauDangKyDn/Admin/${selectedEnterprise.id}`, 
+        payload
+      );
+      // Thay alert bằng showNotification
+      showNotification("Cập nhật trạng thái thành công!", "success");
+      fetchEnterprises();
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+      showNotification("Cập nhật thất bại!", "error");
+    }
+  };
+
+  // --- 4. API Xóa doanh nghiệp (DELETE) ---
+  const handleDeleteEnterprise = async () => {
+    if (!selectedEnterprise) return;
+
+    const confirmDelete = window.confirm(
+      `Bạn có chắc chắn muốn XÓA doanh nghiệp "${selectedEnterprise.tenDoanhNghiep}" không?`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/api/YeuCauDangKyDn/${selectedEnterprise.id}`);
+      
+      showNotification("Đã xóa doanh nghiệp thành công!", "success");
+      setSelectedEnterprise(null); 
+      fetchEnterprises(); 
+
+    } catch (error) {
+      console.error("Lỗi khi xóa:", error);
+      showNotification("Xóa thất bại! Vui lòng thử lại.", "error");
+    }
+  };
+
+  // --- Helper: Màu sắc trạng thái ---
+  const getStatusClass = (status) => {
+    if (status === "ACTIVE") return "active"; 
+    if (status === "PENDING") return "pending";
+    return "";
+  };
+
+  const getStatusLabel = (status) => {
+      if (status === "ACTIVE") return "Đang hoạt động";
+      if (status === "PENDING") return "Chờ duyệt";
+      return status;
+  }
+
+  const displayedEnterprises = enterprises.filter(ent => 
+    ent.tenDoanhNghiep?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ent.maSoThue?.includes(searchTerm)
+  );
+
   return (
-    <AdminLayout
-      currentPage={currentPage}
-      onNavigate={onNavigate}
-      onLogout={onLogout}
-    >
+    <AdminLayout currentPage={currentPage} onNavigate={onNavigate} onLogout={onLogout}>
+      
+      {/* --- PHẦN THÔNG BÁO POPUP (TOAST) --- */}
+      {notification.show && (
+        <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            padding: '12px 24px',
+            borderRadius: '8px',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: notification.type === 'success' ? '#155724' : '#721c24',
+            border: notification.type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            transition: 'opacity 0.5s ease-in-out',
+            fontWeight: '500'
+        }}>
+            {notification.type === 'success' ? '✅ ' : '⚠️ '} 
+            {notification.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Quản lý doanh nghiệp</h1>
-          <p className="page-subtitle">
-            Xem, duyệt và quản lý hồ sơ doanh nghiệp tham gia hệ thống truy xuất
-            nguồn gốc.
-          </p>
-        </div>
-        <div className="page-actions">
-          <button className="btn-outline-sm">Tạo doanh nghiệp thủ công</button>
+          <p className="page-subtitle">Quản lý hồ sơ và phê duyệt doanh nghiệp vào hệ thống.</p>
         </div>
       </div>
 
-      {/* Thanh filter */}
+      {/* Filter Bar */}
       <div className="filter-bar">
         <input
           className="input-search"
-          placeholder="Tìm theo tên doanh nghiệp, MST, email..."
+          placeholder="Tìm tên DN, MST..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <select className="select-sm">
-          <option>Tất cả trạng thái</option>
-          <option>Đang hoạt động</option>
-          <option>Chờ xác minh</option>
-          <option>Tạm khóa</option>
+        <select 
+            className="select-sm"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+        >
+          <option value="ALL">Tất cả trạng thái</option>
+          <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
+          <option value="PENDING">Chờ xác minh (PENDING)</option>
         </select>
-        <button className="btn-primary-sm">Lọc</button>
+        <button className="btn-primary-sm" onClick={fetchEnterprises}>Làm mới</button>
       </div>
 
       <div className="grid-2">
-        {/* Danh sách doanh nghiệp */}
+        {/* Cột trái: Danh sách */}
         <div className="panel">
           <div className="panel-header">
-            <div>
-              <div className="panel-title">Danh sách doanh nghiệp</div>
-              <div className="panel-subtitle">
-                3 doanh nghiệp tiêu biểu (demo – dữ liệu mock).
-              </div>
-            </div>
+            <div className="panel-title">Danh sách ({displayedEnterprises.length})</div>
           </div>
-
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Doanh nghiệp</th>
-                <th>Mã số thuế</th>
-                <th>Liên hệ</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="row-highlight">
-                <td>
-                  <div className="enterprise-cell">
-                    <div className="enterprise-logo">G</div>
-                    <div>
-                      <div className="enterprise-name">GreenMilk JSC</div>
-                      <div className="enterprise-sub">
-                        Sữa, sản phẩm từ sữa
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td>0312345678</td>
-                <td>
-                  contact@greenmilk.vn
-                  <div className="cell-sub">+84 912 345 678</div>
-                </td>
-                <td>
-                  <span className="tag-status active">Đang hoạt động</span>
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div className="enterprise-cell">
-                    <div className="enterprise-logo">X</div>
-                    <div>
-                      <div className="enterprise-name">Trang trại Xanh Việt</div>
-                      <div className="enterprise-sub">Rau củ quả hữu cơ</div>
-                    </div>
-                  </div>
-                </td>
-                <td>0409876543</td>
-                <td>
-                  info@xanhvietfarm.vn
-                  <div className="cell-sub">+84 988 888 999</div>
-                </td>
-                <td>
-                  <span className="tag-status pending">Chờ xác minh</span>
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div className="enterprise-cell">
-                    <div className="enterprise-logo">P</div>
-                    <div>
-                      <div className="enterprise-name">
-                        Nông trại Phú An Foods
-                      </div>
-                      <div className="enterprise-sub">
-                        Thịt gia súc, gia cầm
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td>0201122334</td>
-                <td>
-                  support@phuanfoods.vn
-                  <div className="cell-sub">+84 973 456 222</div>
-                </td>
-                <td>
-                  <span className="tag-status locked">Tạm khóa</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="table-container" style={{maxHeight: '600px', overflowY: 'auto'}}>
+            
+            {/* SỬ DỤNG BIẾN LOADING ĐỂ SỬA LỖI ESLINT */}
+            {loading ? (
+                <div style={{padding: '20px', textAlign: 'center', color: '#666'}}>
+                    <div className="spinner"></div> Đang tải dữ liệu...
+                </div>
+            ) : (
+                <table className="table">
+                    <thead>
+                    <tr>
+                        <th>Doanh nghiệp</th>
+                        <th>MST</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {displayedEnterprises.length > 0 ? (
+                        displayedEnterprises.map((item) => (
+                            <tr 
+                                key={item.id} 
+                                className={selectedEnterprise?.id === item.id ? "row-highlight" : ""}
+                                onClick={() => handleSelectEnterprise(item)}
+                                style={{cursor: 'pointer'}}
+                            >
+                            <td>
+                                <div className="enterprise-name">{item.tenDoanhNghiep}</div>
+                                <div className="enterprise-sub" style={{fontSize: '11px', color:'#666'}}>{item.email}</div>
+                            </td>
+                            <td>{item.maSoThue}</td>
+                            <td>
+                                <span className={`tag-status ${getStatusClass(item.trangThai)}`}>
+                                {getStatusLabel(item.trangThai)}
+                                </span>
+                            </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="3" style={{textAlign: "center", padding: "20px"}}>
+                                Không tìm thấy dữ liệu.
+                            </td>
+                        </tr>
+                    )}
+                    </tbody>
+                </table>
+            )}
+          </div>
         </div>
 
-        {/* Chi tiết doanh nghiệp (doanh nghiệp đang chọn) */}
+        {/* Cột phải: Chi tiết & Hành động */}
         <div className="panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">Hồ sơ doanh nghiệp – GreenMilk JSC</div>
-              <div className="panel-subtitle">
-                MST: 0312345678 • Tỉnh/TP: TP. Hồ Chí Minh
-              </div>
-            </div>
-            <span className="tag-status active">Đang hoạt động</span>
-          </div>
+          {selectedEnterprise ? (
+            <>
+                <div className="panel-header">
+                    <div>
+                        <div className="panel-title">Chi tiết hồ sơ</div>
+                        <div className="panel-subtitle">ID: {selectedEnterprise.id}</div>
+                    </div>
+                    <span className={`tag-status ${getStatusClass(selectedEnterprise.trangThai)}`}>
+                        {selectedEnterprise.trangThai}
+                    </span>
+                </div>
 
-          <div className="enterprise-detail-grid">
-            <div className="detail-block">
-              <div className="detail-label">Thông tin liên hệ</div>
-              <div className="detail-value">
-                - Người đại diện: Nguyễn Văn An – Giám đốc <br />
-                - Email: contact@greenmilk.vn <br />
-                - Điện thoại: +84 912 345 678 <br />
-                - Địa chỉ: 123 Đường Số 1, Quận 7, TP. Hồ Chí Minh
-              </div>
-            </div>
+                <div className="enterprise-detail-grid">
+                    <div className="detail-block">
+                        <div className="detail-label">Thông tin chung</div>
+                        <div className="detail-value">
+                            <strong>{selectedEnterprise.tenDoanhNghiep}</strong><br/>
+                            MST: {selectedEnterprise.maSoThue}<br/>
+                            Email: {selectedEnterprise.email}<br/>
+                            SĐT: {selectedEnterprise.soDienThoai}
+                        </div>
+                    </div>
 
-            <div className="detail-block">
-              <div className="detail-label">Thông tin hệ thống</div>
-              <div className="detail-value">
-                - Ngày tham gia hệ thống: 10/01/2025 <br />
-                - Số sản phẩm đã đăng ký: 24 <br />
-                - Số lô hàng đang hoạt động: 58 <br />
-                - Tổng lượt quét QR: 128.450
-              </div>
-            </div>
+                    <div className="detail-block">
+                        <div className="detail-label">Ghi chú (Admin)</div>
+                        <textarea
+                            className="note-input"
+                            placeholder="Nhập lý do duyệt/từ chối hoặc ghi chú..."
+                            rows={3}
+                            value={noteInput}
+                            onChange={(e) => setNoteInput(e.target.value)}
+                        />
+                    </div>
 
-            <div className="detail-block">
-              <div className="detail-label">Giấy tờ & chứng nhận</div>
-              <div className="detail-value">
-                - Giấy phép kinh doanh: Đã tải lên và xác minh <br />
-                - Chứng nhận VSATTP: Còn hiệu lực đến 12/2026 <br />
-                - Các chứng chỉ khác: ISO 22000:2018, HACCP
-              </div>
-            </div>
+                    {/* BUTTON ACTIONS */}
+                    <div className="enterprise-actions-row" style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                        
+                        {/* Nút Duyệt: Chỉ hiện khi đang PENDING */}
+                        {selectedEnterprise.trangThai === "PENDING" && (
+                             <button 
+                                className="btn-primary"
+                                onClick={() => handleUpdateStatus("ACTIVE")}
+                             >
+                                ✅ Duyệt (Active)
+                             </button>
+                        )}
 
-            <div className="detail-block">
-              <div className="detail-label">Ghi chú nội bộ</div>
-              <textarea
-                className="note-input"
-                placeholder="Nhập ghi chú cho doanh nghiệp (chỉ nội bộ admin nhìn thấy)..."
-                rows={3}
-              />
-            </div>
+                        {/* Nút Hủy duyệt/Khóa: Chỉ hiện khi đang ACTIVE */}
+                        {selectedEnterprise.trangThai === "ACTIVE" && (
+                            <button 
+                                className="btn-outline"
+                                onClick={() => handleUpdateStatus("PENDING")}
+                            >
+                                ⏪ Hoàn về chờ duyệt
+                            </button>
+                        )}
+                        
+                        {/* Nút Lưu Ghi chú: Luôn hiện */}
+                        <button 
+                            className="btn-ghost" 
+                            onClick={() => handleUpdateStatus(null)}
+                        >
+                            💾 Lưu ghi chú
+                        </button>
 
-            <div className="enterprise-actions-row">
-              <button className="btn-ghost-danger">Tạm khóa doanh nghiệp</button>
-              <button className="btn-primary">Lưu thay đổi</button>
+                        {/* Nút Xóa: Luôn hiện, màu đỏ */}
+                        <button 
+                            className="btn-ghost-danger"
+                            style={{marginLeft: 'auto', color: '#dc3545', border: '1px solid #dc3545'}}
+                            onClick={handleDeleteEnterprise}
+                        >
+                            🗑️ Xóa doanh nghiệp
+                        </button>
+                    </div>
+                </div>
+            </>
+          ) : (
+            <div style={{padding: "40px", textAlign: "center", color: "#999"}}>
+                Chọn một doanh nghiệp để xem chi tiết và xử lý.
             </div>
-
-            <div className="hint-text">
-              Khi tạm khóa, tất cả tài khoản thuộc doanh nghiệp này sẽ không thể
-              tạo lô hàng / QR mới, nhưng người dùng cuối vẫn xem được thông tin
-              các sản phẩm đã phát hành trước đó.
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </AdminLayout>
