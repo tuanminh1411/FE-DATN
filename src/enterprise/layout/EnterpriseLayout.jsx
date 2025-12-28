@@ -1,7 +1,45 @@
 // src/enterprise/layout/EnterpriseLayout.jsx
-function EnterpriseLayout({ children, currentPage, onNavigate, onLogout, user }) {
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+// Cấu hình Base URL
+const API_BASE_URL = "http://localhost:5081";
+
+function EnterpriseLayout({ children, currentPage, onNavigate, onLogout }) {
   const safeNavigate = onNavigate || (() => {});
   const safeLogout = onLogout || (() => {});
+
+  // State lưu tên doanh nghiệp
+  const [enterpriseName, setEnterpriseName] = useState("Đang tải...");
+
+  // Effect: Gọi API lấy thông tin doanh nghiệp
+  useEffect(() => {
+    const fetchEnterpriseInfo = async () => {
+      const enterpriseId = localStorage.getItem("currentEnterpriseId");
+      
+      if (enterpriseId) {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/AdminDoanhNghiep/${enterpriseId}`);
+          // Dựa vào hình ảnh JSON bạn gửi, dữ liệu trả về có trường "ten"
+          // Kiểm tra xem dữ liệu nằm ở response.data hay response.data.data
+          const data = response.data; 
+          
+          if (data && data.ten) {
+            setEnterpriseName(data.ten);
+          } else {
+            setEnterpriseName("Doanh nghiệp");
+          }
+        } catch (error) {
+          console.error("Lỗi khi lấy thông tin doanh nghiệp:", error);
+          setEnterpriseName("Doanh nghiệp");
+        }
+      } else {
+        setEnterpriseName("Khách");
+      }
+    };
+
+    fetchEnterpriseInfo();
+  }, []);
 
   const getBreadcrumb = () => {
     switch (currentPage) {
@@ -22,7 +60,8 @@ function EnterpriseLayout({ children, currentPage, onNavigate, onLogout, user })
     }
   };
 
-  const displayName = user?.name || "Doanh nghiệp";
+  // Lấy chữ cái đầu tiên để làm Avatar
+  const avatarLetter = enterpriseName ? enterpriseName.charAt(0).toUpperCase() : "D";
 
   return (
     <div className="app-shell enterprise-shell">
@@ -117,7 +156,8 @@ function EnterpriseLayout({ children, currentPage, onNavigate, onLogout, user })
         <header className="topbar">
           <div className="topbar-left">
             <div className="topbar-breadcrumb">
-              Doanh nghiệp / <span>{getBreadcrumb()}</span>
+              {/* Hiển thị tên doanh nghiệp ở Breadcrumb luôn cho đồng bộ */}
+              {enterpriseName} / <span>{getBreadcrumb()}</span>
             </div>
           </div>
 
@@ -128,10 +168,11 @@ function EnterpriseLayout({ children, currentPage, onNavigate, onLogout, user })
 
             <div className="topbar-user">
               <div className="topbar-avatar">
-                {displayName.charAt(0).toUpperCase()}
+                {avatarLetter}
               </div>
               <div className="topbar-user-info">
-                <div className="topbar-user-name">{displayName}</div>
+                {/* Hiển thị tên doanh nghiệp lấy từ API */}
+                <div className="topbar-user-name">{enterpriseName}</div>
                 <div className="topbar-user-role">Tài khoản doanh nghiệp</div>
               </div>
             </div>
