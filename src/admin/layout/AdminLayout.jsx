@@ -22,6 +22,12 @@ function AdminLayout({ children, currentPage, onNavigate, onLogout }) {
             Quản lý / <span>Doanh nghiệp</span>
           </>
         );
+      case "enterprise-requests":
+        return (
+          <>
+            Quản lý / <span>Yêu cầu doanh nghiệp</span>
+          </>
+        );
       default:
         return (
           <>
@@ -72,6 +78,16 @@ function AdminLayout({ children, currentPage, onNavigate, onLogout }) {
             onClick={() => safeNavigate("enterprises")}
           >
             Doanh nghiệp
+          </button>
+          <button
+            className={
+              currentPage === "enterprise-requests"
+                ? "sidebar-item sidebar-item-active"
+                : "sidebar-item"
+            }
+            onClick={() => safeNavigate("enterprise-requests")}
+          >
+            Yêu cầu doanh nghiệp
           </button>
           <button
             className={

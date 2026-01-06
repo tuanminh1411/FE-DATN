@@ -54,15 +54,19 @@ function LoginPage({ onLoginSuccess, onRegister }) {
         throw new Error("Phản hồi từ server không hợp lệ.");
       }
 
-      // --- [MỚI] LƯU ID VÀ TOKEN VÀO LOCAL STORAGE ---
-      // 1. Lưu Token để các request sau dùng
-      localStorage.setItem("accessToken", token);
       
-      // 2. Lưu thông tin User
+      const userRoles = user.roles || []; 
+
+
+      if (userRoles.includes("NGUOI_TIEU_DUNG")) {
+        throw new Error("Tài khoản hoặc mật khẩu không chính xác.");
+      }
+
+
+      // --- LƯU ID VÀ TOKEN VÀO LOCAL STORAGE ---
+      localStorage.setItem("accessToken", token);
       localStorage.setItem("currentUser", JSON.stringify(user));
 
-      // 3. Lưu ID Doanh nghiệp để các trang quản lý (ProductsPage) sử dụng
-      // (Giả sử trong object user có trường doanhNghiepId, nếu không thì dùng user.id)
       const enterpriseId = user.doanhNghiepId || user.id; 
       localStorage.setItem("currentEnterpriseId", enterpriseId);
       // ---------------------------------------------------
@@ -85,6 +89,7 @@ function LoginPage({ onLoginSuccess, onRegister }) {
     }
   };
 
+  // ... (Phần render return UI giữ nguyên không đổi)
   return (
     <div className="auth-layout">
       <div className="login-card">
