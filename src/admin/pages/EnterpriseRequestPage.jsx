@@ -307,7 +307,7 @@ function EnterpriseRequestPage({ currentPage, onNavigate, onLogout }) {
                                 style={{marginRight:'auto'}}
                                 onClick={handleDeleteRequest}
                             >
-                                🗑️ Xóa
+                                Xóa
                             </button>
 
                             {/* Nút Từ chối */}
@@ -318,7 +318,7 @@ function EnterpriseRequestPage({ currentPage, onNavigate, onLogout }) {
                                     onClick={() => handleProcessRequest("REJECTED")}
                                     disabled={processing}
                                 >
-                                    ⛔ Từ chối
+                                    Từ chối
                                 </button>
                             )}
                             
@@ -329,7 +329,7 @@ function EnterpriseRequestPage({ currentPage, onNavigate, onLogout }) {
                                     onClick={() => handleProcessRequest("ACTIVE")}
                                     disabled={processing}
                                 >
-                                    ✅ Duyệt & Kích hoạt
+                                    Duyệt & Kích hoạt
                                 </button>
                             )}
 
@@ -341,7 +341,7 @@ function EnterpriseRequestPage({ currentPage, onNavigate, onLogout }) {
                                     onClick={() => handleProcessRequest("ACTIVE")}
                                     disabled={processing}
                                 >
-                                    💾 Lưu ghi chú
+                                    Lưu ghi chú
                                 </button>
                             )}
                         </div>

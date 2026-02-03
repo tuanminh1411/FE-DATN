@@ -10,11 +10,9 @@ function BatchesPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // State quản lý Modal Thêm/Sửa
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // State quản lý Modal Chi tiết
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
 
@@ -60,16 +58,11 @@ function BatchesPage() {
       const validProductIds = myProducts.map(p => p.id);
       let myBatches = allBatches.filter(b => validProductIds.includes(b.sanPhamId));
 
-      // Logic xử lý QR: Nếu API list chưa trả về QR, thử gọi API phụ (nếu server bạn có logic này)
-      // Nếu API list đã có sẵn qrImageUrl (như trong ảnh JSON), ta dùng luôn.
       try {
-          // Chỉ gọi nếu cần thiết. Giả sử API list chưa có, ta gọi thêm list_qr
-          // Nếu API của bạn đã trả qrImageUrl trong 'list' rồi thì có thể bỏ đoạn này.
           const qrRes = await axios.get(`${API_BASE_URL}/api/LoHangs/list_qr`).catch(() => ({ data: [] })); 
           const qrList = Array.isArray(qrRes.data) ? qrRes.data : qrRes.data?.data || [];
 
           myBatches = myBatches.map(batch => {
-             // Ưu tiên QR có sẵn trong batch, nếu không thì tìm trong qrList
              if (batch.qrImageUrl) return batch; 
              const qrInfo = qrList.find(q => q.loHangId === batch.id);
              return {
@@ -142,9 +135,9 @@ function BatchesPage() {
       const payload = {
         sanPhamId: formData.sanPhamId,
         maLo: formData.maLo,
-        ngaySanXuat: formData.ngaySanXuat, // format yyyy-MM-dd là ok
+        ngaySanXuat: formData.ngaySanXuat, 
         hanSuDung: formData.hanSuDung || null,
-        soLuong: Number(formData.soLuong), // Bắt buộc là số
+        soLuong: Number(formData.soLuong), 
         tieuChuanApDung: formData.tieuChuanApDung,
         ketQuaKiemNghiem: formData.ketQuaKiemNghiem,
         trangThai: formData.trangThai
@@ -183,8 +176,7 @@ function BatchesPage() {
     setShowDetailModal(true);
   };
 
-  // --- FIX: Component hiển thị tên sản phẩm ---
-  // Không gọi API trong này nữa để tránh infinite loop/performance issue
+
   const ProductName = ({ productId, productsList }) => {
     const product = productsList.find(p => p.id === productId);
     return <span style={{fontWeight: 500}}>{product ? product.ten : "Đang tải..."}</span>;

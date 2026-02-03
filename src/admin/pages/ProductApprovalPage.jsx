@@ -319,7 +319,7 @@ function ProductApprovalPage({ currentPage, onNavigate, onLogout }) {
                                     onClick={() => handleUpdateStatus("REJECTED")}
                                     disabled={processing}
                                 >
-                                    ⛔ Từ chối
+                                    Từ chối
                                 </button>
                             )}
                             
@@ -329,7 +329,7 @@ function ProductApprovalPage({ currentPage, onNavigate, onLogout }) {
                                     onClick={() => handleUpdateStatus("ACTIVE")}
                                     disabled={processing}
                                 >
-                                    ✅ Duyệt & Phát hành
+                                    Duyệt & Phát hành
                                 </button>
                             )}
                         </div>
